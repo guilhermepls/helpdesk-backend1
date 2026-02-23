@@ -11,12 +11,12 @@ const uploadFile = async (req, res) => {
 
     const openAiFileId = await openaiService.uploadPdfToOpenAI(
       fileBuffer,
-      fileName,
+      fileName
     );
 
     return res.json({
       fileId: openAiFileId,
-      message: "Arquivo salvo com sucesso no back-end!",
+      message: "Arquivo salvo com sucesso!",
     });
   } catch (error) {
     console.error("Erro no fileController (upload):", error);
@@ -27,12 +27,15 @@ const uploadFile = async (req, res) => {
 const createVectorStore = async (req, res) => {
   try {
     const { name } = req.body;
-    if (!name)
+
+    if (!name || !name.trim()) {
       return res
         .status(400)
         .json({ error: "Nome do Vector Store é obrigatório." });
+    }
 
     const vectorStoreId = await openaiService.createVectorStore(name);
+
     return res.json({ vectorStoreId });
   } catch (error) {
     console.error("Erro no fileController (vector store):", error);
@@ -45,47 +48,123 @@ const createVectorStore = async (req, res) => {
 const addFileToVectorStore = async (req, res) => {
   try {
     const { vectorStoreId, fileId } = req.body;
-    if (!vectorStoreId || !fileId)
-      return res.status(400).json({ error: "Faltam IDs necessários." });
 
-    const vectorStoreFileId = await openaiService.attachFileToVectorStore(
-      vectorStoreId,
-      fileId,
-    );
-    return res.json({ vectorStoreFileId });
+    if (!vectorStoreId || !fileId) {
+      return res.status(400).json({ error: "Faltam IDs necessários." });
+    }
+
+    const vectorStoreFileId =
+      await openaiService.attachFileToVectorStore(
+        vectorStoreId,
+        fileId
+      );
+
+    return res.json({
+      vectorStoreFileId,
+      message: "Arquivo indexado com sucesso!",
+    });
   } catch (error) {
     console.error("Erro no fileController (attach):", error);
-    return res.status(500).json({ error: "Erro ao anexar arquivo na IA." });
+    return res.status(500).json({
+      error: "Erro ao anexar arquivo na IA.",
+    });
+  }
+};
+
+const chat = async (req, res) => {
+  try {
+    const { message, history, context, vectorStoreId } = req.body;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({
+        error: "Mensagem é obrigatória.",
+      });
+    }
+
+    const reply = await openaiService.processChat(
+      message,
+      history || [],
+      context || "",
+      vectorStoreId || null
+    );
+
+    return res.json({ reply });
+  } catch (error) {
+    console.error("Erro no chat:", error);
+    return res.status(500).json({
+      error: "Erro ao processar chat.",
+    });
   }
 };
 
 const listFiles = async (req, res) => {
   try {
     const { vectorStoreId } = req.params;
-    const files = await openaiService.listVectorStoreFiles(vectorStoreId);
-    res.json(files);
-  } catch (error) {
-    res.status(500).json({ error: "Erro ao listar arquivos." });
-  }
-};
 
-const deleteFile = async (req, res) => {
-  try {
-    const { fileId } = req.params;
-    await openaiService.deleteFile(fileId);
-    res.json({ message: "Arquivo deletado." });
+    if (!vectorStoreId) {
+      return res.status(400).json({
+        error: "VectorStoreId é obrigatório.",
+      });
+    }
+
+    const files =
+      await openaiService.listVectorStoreFiles(vectorStoreId);
+
+    return res.json(files);
   } catch (error) {
-    res.status(500).json({ error: "Erro ao deletar arquivo." });
+    console.error("Erro ao listar arquivos:", error);
+    return res.status(500).json({
+      error: "Erro ao listar arquivos.",
+    });
   }
 };
 
 const detachFile = async (req, res) => {
   try {
     const { vectorStoreId, fileId } = req.params;
-    await openaiService.deleteVectorStoreFile(vectorStoreId, fileId);
-    res.json({ message: "Arquivo removido do índice." });
+
+    if (!vectorStoreId || !fileId) {
+      return res.status(400).json({
+        error: "IDs são obrigatórios.",
+      });
+    }
+
+    await openaiService.deleteVectorStoreFile(
+      vectorStoreId,
+      fileId
+    );
+
+    return res.json({
+      message: "Arquivo removido do índice.",
+    });
   } catch (error) {
-    res.status(500).json({ error: "Erro ao remover do índice." });
+    console.error("Erro ao remover do índice:", error);
+    return res.status(500).json({
+      error: "Erro ao remover do índice.",
+    });
+  }
+};
+
+const deleteFile = async (req, res) => {
+  try {
+    const { fileId } = req.params;
+
+    if (!fileId) {
+      return res.status(400).json({
+        error: "FileId é obrigatório.",
+      });
+    }
+
+    await openaiService.deleteFile(fileId);
+
+    return res.json({
+      message: "Arquivo deletado permanentemente.",
+    });
+  } catch (error) {
+    console.error("Erro ao deletar arquivo:", error);
+    return res.status(500).json({
+      error: "Erro ao deletar arquivo.",
+    });
   }
 };
 
@@ -96,4 +175,5 @@ module.exports = {
   listFiles,
   deleteFile,
   detachFile,
+  chat,
 };

@@ -1,15 +1,16 @@
 const express = require("express");
 const router = express.Router();
-const multer = require("multer");
 const fileController = require("../controllers/fileController");
+const multer = require("multer");
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer();
 
-router.post("/upload", upload.single("file"), fileController.uploadFile);
-router.post("/vector-stores", fileController.createVectorStore);
-router.post("/vector-stores/attach", fileController.addFileToVectorStore);
-router.get("/vector-stores/:vectorStoreId/files", fileController.listFiles);
-router.delete("/:fileId", fileController.deleteFile);
-router.delete("/vector-stores/:vectorStoreId/files/:fileId", fileController.detachFile,);
+router.post("/files/upload", upload.single("file"), fileController.uploadFile);
+router.post("/files/vector-stores", fileController.createVectorStore);
+router.post("/files/vector-stores/attach", fileController.addFileToVectorStore);
+router.get("/files/vector-stores/:vectorStoreId/files", fileController.listFiles);
+router.delete("/files/vector-stores/:vectorStoreId/files/:fileId", fileController.detachFile);
+router.delete("/files/:fileId", fileController.deleteFile);
+router.post("/chat", fileController.chat);
 
 module.exports = router;
