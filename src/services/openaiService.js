@@ -4,6 +4,10 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+const getVectorStoreManager = () => {
+  return openai.vectorStores || (openai.beta && openai.beta.vectorStores);
+};
+
 const processChat = async (userMessage, chatHistory = [], faqContext = "") => {
   try {
     const systemInstructions = `
@@ -40,10 +44,7 @@ const processChat = async (userMessage, chatHistory = [], faqContext = "") => {
 const uploadPdfToOpenAI = async (fileBuffer, fileName) => {
   try {
     const file = await openai.files.create({
-      file: {
-        url: fileName,
-        blob: () => new Blob([fileBuffer]),
-      },
+      file: await OpenAI.toFile(fileBuffer, fileName),
       purpose: "assistants",
     });
     return file.id;
@@ -55,9 +56,11 @@ const uploadPdfToOpenAI = async (fileBuffer, fileName) => {
 
 const createVectorStore = async (name) => {
   try {
-    const vectorStore = await openai.beta.vectorStores.create({
-      name: name,
-    });
+    const manager = getVectorStoreManager();
+    if (!manager)
+      throw new Error("Gerenciador de Vector Stores não encontrado na SDK.");
+
+    const vectorStore = await manager.create({ name });
     return vectorStore.id;
   } catch (error) {
     console.error("Erro no createVectorStore:", error);
@@ -67,12 +70,10 @@ const createVectorStore = async (name) => {
 
 const attachFileToVectorStore = async (vectorStoreId, fileId) => {
   try {
-    const myVectorStoreFile = await openai.beta.vectorStores.files.create(
-      vectorStoreId,
-      {
-        file_id: fileId,
-      },
-    );
+    const manager = getVectorStoreManager();
+    const myVectorStoreFile = await manager.files.create(vectorStoreId, {
+      file_id: fileId,
+    });
     return myVectorStoreFile.id;
   } catch (error) {
     console.error("Erro no attachFileToVectorStore:", error);
@@ -82,7 +83,8 @@ const attachFileToVectorStore = async (vectorStoreId, fileId) => {
 
 const listVectorStoreFiles = async (vectorStoreId) => {
   try {
-    const list = await openai.beta.vectorStores.files.list(vectorStoreId);
+    const manager = getVectorStoreManager();
+    const list = await manager.files.list(vectorStoreId);
     return list.data;
   } catch (error) {
     console.error("Erro no listVectorStoreFiles:", error);
@@ -92,7 +94,8 @@ const listVectorStoreFiles = async (vectorStoreId) => {
 
 const deleteVectorStoreFile = async (vectorStoreId, fileId) => {
   try {
-    return await openai.beta.vectorStores.files.del(vectorStoreId, fileId);
+    const manager = getVectorStoreManager();
+    return await manager.files.del(vectorStoreId, fileId);
   } catch (error) {
     console.error("Erro no deleteVectorStoreFile:", error);
     throw error;
