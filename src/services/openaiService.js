@@ -32,11 +32,88 @@ const processChat = async (userMessage, chatHistory = [], faqContext = "") => {
 
     return response.choices[0].message.content;
   } catch (error) {
-    console.error("Erro dentro do openaiService:", error);
+    console.error("Erro no processChat:", error);
     throw new Error("Falha ao comunicar com a OpenAI");
+  }
+};
+
+const uploadPdfToOpenAI = async (fileBuffer, fileName) => {
+  try {
+    const file = await openai.files.create({
+      file: {
+        url: fileName,
+        blob: () => new Blob([fileBuffer]),
+      },
+      purpose: "assistants",
+    });
+    return file.id;
+  } catch (error) {
+    console.error("Erro no uploadPdfToOpenAI:", error);
+    throw error;
+  }
+};
+
+const createVectorStore = async (name) => {
+  try {
+    const vectorStore = await openai.beta.vectorStores.create({
+      name: name,
+    });
+    return vectorStore.id;
+  } catch (error) {
+    console.error("Erro no createVectorStore:", error);
+    throw error;
+  }
+};
+
+const attachFileToVectorStore = async (vectorStoreId, fileId) => {
+  try {
+    const myVectorStoreFile = await openai.beta.vectorStores.files.create(
+      vectorStoreId,
+      {
+        file_id: fileId,
+      },
+    );
+    return myVectorStoreFile.id;
+  } catch (error) {
+    console.error("Erro no attachFileToVectorStore:", error);
+    throw error;
+  }
+};
+
+const listVectorStoreFiles = async (vectorStoreId) => {
+  try {
+    const list = await openai.beta.vectorStores.files.list(vectorStoreId);
+    return list.data;
+  } catch (error) {
+    console.error("Erro no listVectorStoreFiles:", error);
+    throw error;
+  }
+};
+
+const deleteVectorStoreFile = async (vectorStoreId, fileId) => {
+  try {
+    return await openai.beta.vectorStores.files.del(vectorStoreId, fileId);
+  } catch (error) {
+    console.error("Erro no deleteVectorStoreFile:", error);
+    throw error;
+  }
+};
+
+const deleteFile = async (fileId) => {
+  try {
+    return await openai.files.del(fileId);
+  } catch (error) {
+    console.error("Erro no deleteFile:", error);
+    throw error;
   }
 };
 
 module.exports = {
   processChat,
+  uploadPdfToOpenAI,
+  createVectorStore,
+  attachFileToVectorStore,
+  listVectorStoreFiles,
+  deleteVectorStoreFile,
+  deleteFile,
 };

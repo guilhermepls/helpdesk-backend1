@@ -3,7 +3,8 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
-const chatRoutes = require('./src/routes/chatRoutes');
+const chatRoutes = require("./src/routes/chatRoutes");
+const fileRoutes = require("./src/routes/fileRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,6 +17,7 @@ app.get("/api/status", (req, res) => {
 });
 
 app.use("/api/chat", chatRoutes);
+app.use("/api/files", fileRoutes);
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);
